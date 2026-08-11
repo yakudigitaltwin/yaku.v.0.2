@@ -1,0 +1,7 @@
+name = "YakuDigitalTwin"
+uuid = "6a1b8a7d-3a7d-4a9b-9e8b-0d7f3a4c0001"
+authors = ["Yaku-Digital Twin"]
+version = "0.1.0"
+
+[deps]
+DifferentialEquations = "0c46a032-eb83-5123-abaf-570d42b7fbaa"
