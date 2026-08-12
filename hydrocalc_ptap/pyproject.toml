@@ -1,0 +1,78 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hydrocalc-ptap"
+version = "0.1.0"
+description = "Plataforma de cálculo para ingeniería del agua - PTAP, coagulación y floculación"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "HydroCalc Team", email = "hydrocalc@example.com"}
+]
+keywords = ["water treatment", "PTAP", "engineering", "coagulation", "flocculation", "hydraulics"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+requires-python = ">=3.9"
+dependencies = [
+    "numpy>=1.24.0",
+    "scipy>=1.10.0",
+    "pandas>=2.0.0",
+    "matplotlib>=3.7.0",
+    "plotly>=5.14.0",
+    "streamlit>=1.22.0",
+    "reportlab>=4.0.0",
+    "openpyxl>=3.1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.3.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+    "mypy>=1.0.0",
+]
+sciml = [
+    "torch>=2.0.0",
+    "scikit-learn>=1.2.0",
+    "jax>=0.4.0",
+    "diffrax>=0.4.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/hydrocalc-ptap/hydrocalc-ptap"
+Documentation = "https://hydrocalc-ptap.readthedocs.io"
+Repository = "https://github.com/hydrocalc-ptap/hydrocalc-ptap"
+
+[project.scripts]
+hydrocalc = "app.main:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["hydrocalc*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+
+[tool.black]
+line-length = 88
+target-version = ['py39', 'py310', 'py311']
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
