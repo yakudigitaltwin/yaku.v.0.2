@@ -1,0 +1,315 @@
+# -*- coding: utf-8 -*-
+"""
+Macro FreeCAD para crear una Planta de Potabilización de Agua Compacta
+Autor: Asistente de Código
+Descripción: Genera los componentes principales de una planta compacta incluyendo:
+    - Tanque de mezcla rápida
+    - Floculador (mezcla lenta)
+    - Sedimentador/Decantador
+    - Filtro
+    - Tanque de agua tratada
+"""
+
+import FreeCAD as App
+import Part
+import math
+
+def create_cylinder(radius, height, placement=(0, 0, 0)):
+    """Crea un cilindro básico"""
+    cylinder = Part.makeCylinder(radius, height)
+    cylinder.Placement = App.Placement(App.Vector(placement), App.Rotation())
+    return cylinder
+
+def create_box(length, width, height, placement=(0, 0, 0)):
+    """Crea un paralelepípedo básico"""
+    box = Part.makeBox(length, width, height)
+    box.Placement = App.Placement(App.Vector(placement), App.Rotation())
+    return box
+
+def create_pipe(radius, length, direction='Z'):
+    """Crea una tubería"""
+    if direction == 'Z':
+        pipe = Part.makeCylinder(radius, length)
+    elif direction == 'X':
+        pipe = Part.makeCylinder(radius, length)
+        pipe.Placement = App.Placement(App.Vector(0, 0, 0), App.Rotation(90, 0, 0))
+    elif direction == 'Y':
+        pipe = Part.makeCylinder(radius, length)
+        pipe.Placement = App.Placement(App.Vector(0, 0, 0), App.Rotation(0, 90, 0))
+    return pipe
+
+def create_compact_water_treatment_plant():
+    """Función principal para crear la planta de potabilización compacta"""
+    
+    # Parámetros generales (en mm)
+    doc = App.newDocument("PlantaPotabilizacionCompacta")
+    App.setActiveDocument(doc.Name)
+    
+    # ==========================================
+    # 1. TANQUE DE MEZCLA RÁPIDA
+    # ==========================================
+    print("Creando tanque de mezcla rápida...")
+    
+    # Dimensiones del tanque de mezcla rápida
+    tmr_radius = 500  # mm
+    tmr_height = 1200  # mm
+    tmr_base_z = 0
+    
+    # Cuerpo del tanque
+    tmr_shell = create_cylinder(tmr_radius, tmr_height, (0, 0, tmr_base_z))
+    
+    # Agitador (eje vertical)
+    agitator_shaft = create_cylinder(30, tmr_height * 0.8, (0, 0, tmr_base_z + tmr_height * 0.1))
+    
+    # Paletas del agitador (2 niveles)
+    paddle1 = create_box(400, 60, 20, (-200, -30, tmr_base_z + tmr_height * 0.3))
+    paddle2 = create_box(400, 60, 20, (-200, -30, tmr_base_z + tmr_height * 0.5))
+    
+    # Tubería de entrada (lateral)
+    inlet_pipe = create_pipe(75, 300, 'X')
+    inlet_pipe.Placement = App.Placement(App.Vector(-tmr_radius - 300, 0, tmr_base_z + tmr_height * 0.7), App.Rotation(0, 0, 0))
+    
+    # Tubería de salida (hacia floculador)
+    outlet_tmr = create_pipe(100, 400, 'Y')
+    outlet_tmr.Placement = App.Placement(App.Vector(0, tmr_radius, tmr_base_z + tmr_height * 0.3), App.Rotation(0, 0, 0))
+    
+    # Unir todas las partes del tanque de mezcla rápida
+    tmr_compound = Part.Compound([tmr_shell, agitator_shaft, paddle1, paddle2, inlet_pipe, outlet_tmr])
+    tmr_shape = Part.show(tmr_compound, "Mezcla_Rapida")
+    tmr_shape.Label = "Tanque Mezcla Rápida"
+    
+    # ==========================================
+    # 2. FLOCULADOR (MEZCLA LENTA)
+    # ==========================================
+    print("Creando floculador...")
+    
+    floc_distance = 1500  # Distancia desde el tanque de mezcla rápida
+    
+    # Dimensiones del floculador
+    floc_radius = 800  # mm
+    floc_height = 1500  # mm
+    floc_base_z = 0
+    
+    # Cuerpo del floculador
+    floc_shell = create_cylinder(floc_radius, floc_height, (floc_distance, 0, floc_base_z))
+    
+    # Agitador de paletas lentas
+    floc_shaft = create_cylinder(40, floc_height * 0.7, (floc_distance, 0, floc_base_z + floc_height * 0.15))
+    
+    # Paletas grandes para mezcla lenta
+    floc_paddle1 = create_box(600, 80, 30, (floc_distance - 300, -40, floc_base_z + floc_height * 0.35))
+    floc_paddle2 = create_box(600, 80, 30, (floc_distance - 300, -40, floc_base_z + floc_height * 0.55))
+    
+    # Tubería de conexión desde mezcla rápida
+    conn_pipe1 = create_pipe(100, 500, 'Y')
+    conn_pipe1.Placement = App.Placement(App.Vector(0, tmr_radius, floc_base_z + floc_height * 0.3), App.Rotation(0, 0, 0))
+    
+    # Tubería de salida hacia sedimentador
+    outlet_floc = create_pipe(150, 600, 'Y')
+    outlet_floc.Placement = App.Placement(App.Vector(floc_distance, floc_radius, floc_base_z + floc_height * 0.2), App.Rotation(0, 0, 0))
+    
+    floc_compound = Part.Compound([floc_shell, floc_shaft, floc_paddle1, floc_paddle2, conn_pipe1, outlet_floc])
+    floc_shape = Part.show(floc_compound, "Floculador")
+    floc_shape.Label = "Floculador"
+    
+    # ==========================================
+    # 3. SEDIMENTADOR / DECANTADOR
+    # ==========================================
+    print("Creando sedimentador...")
+    
+    sed_distance = floc_distance + 2000  # Distancia desde el floculador
+    
+    # Dimensiones del sedimentador (rectangular para mejor eficiencia)
+    sed_length = 3000  # mm
+    sed_width = 1500  # mm
+    sed_height = 1800  # mm
+    sed_base_z = 0
+    
+    # Cuerpo del sedimentador
+    sed_tank = create_box(sed_length, sed_width, sed_height, (sed_distance, 0, sed_base_z))
+    
+    # Placas inclinadas (lamelas) - simplificadas como planos
+    lamella_count = 8
+    lamella_spacing = sed_height / (lamella_count + 1)
+    
+    lamellas = []
+    for i in range(lamella_count):
+        z_pos = sed_base_z + sed_height * 0.3 + i * lamella_spacing
+        lamella = create_box(sed_length * 0.7, sed_width, 10, (sed_distance, 0, z_pos))
+        # Rotar ligeramente para simular inclinación
+        lamella.Placement = App.Placement(
+            App.Vector(sed_distance, 0, z_pos),
+            App.Rotation(0, 0, 15)  # 15 grados de inclinación
+        )
+        lamellas.append(lamella)
+    
+    # Tolva de lodos en la parte inferior
+    hopper = create_cylinder(400, 500, (sed_distance, 0, sed_base_z - 500))
+    
+    # Tubería de entrada desde floculador
+    inlet_sed = create_pipe(150, 700, 'Y')
+    inlet_sed.Placement = App.Placement(App.Vector(floc_distance, floc_radius, sed_base_z + sed_height * 0.6), App.Rotation(0, 0, 0))
+    
+    # Tubería de salida de agua clarificada (superior)
+    outlet_sed_top = create_pipe(200, 800, 'Y')
+    outlet_sed_top.Placement = App.Placement(App.Vector(sed_distance, sed_width/2, sed_base_z + sed_height * 0.85), App.Rotation(0, 0, 0))
+    
+    # Tubería de purga de lodos
+    sludge_pipe = create_pipe(100, 600, 'Z')
+    sludge_pipe.Placement = App.Placement(App.Vector(sed_distance, 0, sed_base_z - 500), App.Rotation(0, 0, 0))
+    
+    sed_parts = [sed_tank, hopper, inlet_sed, outlet_sed_top, sludge_pipe] + lamellas
+    sed_compound = Part.Compound(sed_parts)
+    sed_shape = Part.show(sed_compound, "Sedimentador")
+    sed_shape.Label = "Sedimentador"
+    
+    # ==========================================
+    # 4. FILTRO
+    # ==========================================
+    print("Creando filtro...")
+    
+    filter_distance = sed_distance + 4000  # Distancia desde el sedimentador
+    
+    # Dimensiones del filtro
+    filter_radius = 1000  # mm
+    filter_height = 2000  # mm
+    filter_base_z = 0
+    
+    # Cuerpo del filtro
+    filter_shell = create_cylinder(filter_radius, filter_height, (filter_distance, 0, filter_base_z))
+    
+    # Capas filtrantes (representadas como cilindros concéntricos de diferentes materiales)
+    # Capa de grava gruesa (inferior)
+    gravel_layer = create_cylinder(filter_radius - 50, 400, (filter_distance, 0, filter_base_z + 100))
+    
+    # Capa de arena (media)
+    sand_layer = create_cylinder(filter_radius - 50, 800, (filter_distance, 0, filter_base_z + 500))
+    
+    # Capa de antracita (superior)
+    anthracite_layer = create_cylinder(filter_radius - 50, 600, (filter_distance, 0, filter_base_z + 1300))
+    
+    # Sistema de drenaje (tuberías perforadas - simplificado)
+    drain_pipe1 = create_pipe(50, filter_radius * 1.5, 'X')
+    drain_pipe1.Placement = App.Placement(App.Vector(filter_distance - filter_radius, 0, filter_base_z + 50), App.Rotation(0, 0, 0))
+    
+    drain_pipe2 = create_pipe(50, filter_radius * 1.5, 'Y')
+    drain_pipe2.Placement = App.Placement(App.Vector(filter_distance, -filter_radius, filter_base_z + 50), App.Rotation(0, 0, 0))
+    
+    # Tubería de entrada desde sedimentador
+    inlet_filter = create_pipe(200, 900, 'Y')
+    inlet_filter.Placement = App.Placement(App.Vector(sed_distance, sed_width/2, filter_base_z + filter_height * 0.7), App.Rotation(0, 0, 0))
+    
+    # Tubería de salida de agua filtrada
+    outlet_filter = create_pipe(200, 1000, 'Y')
+    outlet_filter.Placement = App.Placement(App.Vector(filter_distance, 0, filter_base_z + 100), App.Rotation(0, 0, 0))
+    
+    # Tubería de retrolavado
+    backwash_pipe = create_pipe(150, 500, 'Z')
+    backwash_pipe.Placement = App.Placement(App.Vector(filter_distance, filter_radius + 200, filter_base_z + 100), App.Rotation(0, 0, 0))
+    
+    filter_parts = [filter_shell, gravel_layer, sand_layer, anthracite_layer, 
+                   drain_pipe1, drain_pipe2, inlet_filter, outlet_filter, backwash_pipe]
+    filter_compound = Part.Compound(filter_parts)
+    filter_shape = Part.show(filter_compound, "Filtro")
+    filter_shape.Label = "Filtro"
+    
+    # ==========================================
+    # 5. TANQUE DE AGUA TRATADA
+    # ==========================================
+    print("Creando tanque de agua tratada...")
+    
+    tank_distance = filter_distance + 2500  # Distancia desde el filtro
+    
+    # Dimensiones del tanque de agua tratada
+    treated_radius = 1200  # mm
+    treated_height = 2500  # mm
+    treated_base_z = 0
+    
+    # Cuerpo del tanque
+    treated_tank = create_cylinder(treated_radius, treated_height, (tank_distance, 0, treated_base_z))
+    
+    # Tapa del tanque
+    tank_lid = create_cylinder(treated_radius + 50, 100, (tank_distance, 0, treated_base_z + treated_height))
+    
+    # Tubería de entrada desde filtro
+    inlet_treated = create_pipe(200, 1100, 'Y')
+    inlet_treated.Placement = App.Placement(App.Vector(filter_distance, 0, treated_base_z + treated_height * 0.8), App.Rotation(0, 0, 0))
+    
+    # Tubería de salida (agua potable)
+    outlet_treated = create_pipe(250, 800, 'Y')
+    outlet_treated.Placement = App.Placement(App.Vector(tank_distance, -treated_radius, treated_base_z + 200), App.Rotation(0, 0, 0))
+    
+    # Válvula de ventilación
+    vent_pipe = create_pipe(50, 300, 'Z')
+    vent_pipe.Placement = App.Placement(App.Vector(tank_distance, 0, treated_base_z + treated_height), App.Rotation(0, 0, 0))
+    
+    treated_parts = [treated_tank, tank_lid, inlet_treated, outlet_treated, vent_pipe]
+    treated_compound = Part.Compound(treated_parts)
+    treated_shape = Part.show(treated_compound, "Tanque_Agua_Tratada")
+    treated_shape.Label = "Tanque Agua Tratada"
+    
+    # ==========================================
+    # 6. BASE COMÚN / PLATAFORMA
+    # ==========================================
+    print("Creando plataforma base...")
+    
+    base_length = tank_distance + treated_radius + 1000
+    base_width = 4000
+    base_height = 200
+    
+    base_platform = create_box(base_length, base_width, base_height, (-base_length/2, -base_width/2, -base_height))
+    base_shape = Part.show(base_platform, "Plataforma_Base")
+    base_shape.Label = "Plataforma Base"
+    
+    # ==========================================
+    # 7. ETIQUETAS Y COLORES
+    # ==========================================
+    print("Aplicando colores a los componentes...")
+    
+    # Asignar colores sugeridos (requiere GUI)
+    color_map = {
+        "Tanque Mezcla Rápida": (1.0, 0.8, 0.2),  # Amarillo
+        "Floculador": (0.2, 0.8, 1.0),  # Cyan
+        "Sedimentador": (0.8, 0.8, 0.8),  # Gris claro
+        "Filtro": (0.6, 0.4, 0.2),  # Marrón
+        "Tanque Agua Tratada": (0.2, 0.6, 1.0),  # Azul
+        "Plataforma Base": (0.5, 0.5, 0.5),  # Gris
+    }
+    
+    # ==========================================
+    # AJUSTAR VISTA
+    # ==========================================
+    doc.recompute()
+    
+    # Intentar ajustar la vista para mostrar todo el modelo
+    try:
+        Gui = App.getGui()
+        if Gui:
+            view = Gui.activeDocument().activeView()
+            view.viewAxometric()
+            view.fitAll()
+    except:
+        pass  # Continuar si no hay GUI disponible
+    
+    print("=" * 60)
+    print("¡Planta de Potabilización Compacta creada exitosamente!")
+    print("=" * 60)
+    print("\nComponentes creados:")
+    print("  1. Tanque de Mezcla Rápida")
+    print("  2. Floculador (Mezcla Lenta)")
+    print("  3. Sedimentador/Decantador con lamelas")
+    print("  4. Filtro multicapa")
+    print("  5. Tanque de Agua Tratada")
+    print("  6. Plataforma Base")
+    print("\nDimensiones totales aproximadas:")
+    print(f"  Largo: {base_length/1000:.2f} m")
+    print(f"  Ancho: {base_width/1000:.2f} m")
+    print(f"  Alto máximo: {treated_height/1000:.2f} m")
+    print("\nNota: Los colores se pueden asignar manualmente en FreeCAD GUI")
+    print("=" * 60)
+    
+    return doc
+
+# Ejecutar la macro
+if __name__ == "__main__":
+    create_compact_water_treatment_plant()
